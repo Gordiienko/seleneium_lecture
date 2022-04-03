@@ -1,7 +1,6 @@
 package novaPoshtaTests;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
-import org.assertj.core.api.Assertions;
 import org.openqa.selenium.Alert;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
@@ -16,8 +15,13 @@ import org.testng.annotations.Test;
 import tools.JavaScript;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.setRemoveAssertJRelatedElementsFromStackTrace;
 
 public class SeleniumLaba {
     private WebDriver driver;
@@ -94,9 +98,9 @@ public class SeleniumLaba {
         String actualResult = driver.findElement(By.xpath("//p[@id='dynamicClickMessage']")).getText();
         assertThat(actualResult).isEqualTo(exceptedResultOfClick);
         WebElement elementRightClick = driver.findElement(By.xpath("//button[@id='rightClickBtn']"));
-        Actions action= new Actions(driver);
+        Actions action = new Actions(driver);
         action.contextClick(elementRightClick).build().perform();
-        String actualResultOfRightClick=driver.findElement(By.id("rightClickMessage")).getText();
+        String actualResultOfRightClick = driver.findElement(By.id("rightClickMessage")).getText();
         assertThat(actualResultOfRightClick).isEqualTo(exceptedResultOfRightClick);
         WebElement doubleClickOnButton = driver.findElement(By.id("doubleClickBtn"));
         action.doubleClick(doubleClickOnButton).build().perform();
@@ -104,33 +108,39 @@ public class SeleniumLaba {
         assertThat(actualResultDoubleClick).isEqualTo(exceptedResultDoubleClick);
 
     }
+
     @Test(priority = 4)
-    public void checkTheNewTab(){
+    public void checkTheNewTab() {
         String exceptedWebElement = "This is a sample page";
         WebElement elements = driver.findElement(By.xpath("//h5[text()='Alerts, Frame & Windows']"));
         javaScript.scrollIntoView(elements).click();
         driver.findElement(By.xpath("//span[text()='Browser Windows']")).click();
+        String currentWindow = driver.getWindowHandle();
         driver.findElement(By.xpath("//button[text()='New Tab']")).click();
-        for(String winHandle : driver.getWindowHandles()){
-            driver.switchTo().window(winHandle);
-        }
+        List<String> allWindows = new ArrayList<>(driver.getWindowHandles());
+        String newTab = allWindows.stream().filter(a->!a.equals(currentWindow)).findFirst().get();
+
+        driver.switchTo().window(newTab);
+
         String actualElement = driver.findElement(By.id("sampleHeading")).getText();
         assertThat(actualElement).isEqualTo(exceptedWebElement);
     }
+
     @Test(priority = 5)
-    public void ClickOnAlerts(){
+    public void clickOnAlerts() {
         String exceptedAlert = "You clicked a button";
         WebElement elements = driver.findElement(By.xpath("//h5[text()='Alerts, Frame & Windows']"));
         javaScript.scrollIntoView(elements).click();
         driver.findElement(By.xpath("//span[text()='Alerts']")).click();
         driver.findElement(By.xpath("//div/button[@id='alertButton']")).click();
 
-        Alert alert= driver.switchTo().alert();
+        Alert alert = driver.switchTo().alert();
         String actualAlert = alert.getText();
         assertThat(actualAlert).isEqualTo(exceptedAlert);
     }
+
     @Test(priority = 6)
-    public void checkThatAlertDisappear(){
+    public void checkThatAlertDisappear() {
         String exceptedAlert = "This alert appeared after 5 seconds";
         WebElement elements = driver.findElement(By.xpath("//h5[text()='Alerts, Frame & Windows']"));
         javaScript.scrollIntoView(elements).click();
@@ -138,16 +148,85 @@ public class SeleniumLaba {
         driver.findElement(By.xpath("//button[@id='timerAlertButton']")).click();
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(6));
         wait.until(ExpectedConditions.alertIsPresent());
-        Alert alert= driver.switchTo().alert();
+        Alert alert = driver.switchTo().alert();
         String actualAlert = alert.getText();
         assertThat(actualAlert).isEqualTo(exceptedAlert);
         alert.accept();
         alert = ExpectedConditions.alertIsPresent().apply(driver);
-        Assertions.assertThat(alert).isEqualTo(null);
+        assertThat(alert).isEqualTo(null);
     }
 
- @AfterMethod(alwaysRun = true)
+    @Test(priority = 7)
+    public void clickFrames() {
+        String exceptedText = "This is a sample page";
+        WebElement elements = driver.findElement(By.xpath("//h5[text()='Alerts, Frame & Windows']"));
+        javaScript.scrollIntoView(elements).click();
+        driver.findElement(By.xpath("//span[text()='Frames']")).click();
+        driver.switchTo().frame("frame1");
+        String actualText = driver.findElement(By.id("sampleHeading")).getText();
+        assertThat(actualText).isEqualTo(exceptedText);
+    }
+
+    @Test(priority = 8)
+    public void checkModals() {
+        String exceptedText = "This is a small modal. It has very less content";
+        String exceptedTitle = "Small Modal";
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(2));
+        WebElement elements = driver.findElement(By.xpath("//h5[text()='Alerts, Frame & Windows']"));
+        javaScript.scrollIntoView(elements).click();
+        driver.findElement(By.xpath("//span[text()='Modal Dialogs']")).click();
+        driver.findElement(By.id("showSmallModal")).click();
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.className("modal-content")));
+
+        String actualTitle = driver.findElement(By.xpath("//div[@class='modal-header']/div[text()='Small Modal']")).getText();
+        assertThat(actualTitle).isEqualTo(exceptedTitle);
+        WebElement actualText = driver.findElement(By.xpath("//div[@class='modal-body']"));
+
+        assertThat(actualText.getText()).isEqualTo(exceptedText);
+        driver.findElement(By.id("closeSmallModal")).click();
+
+        wait.until(ExpectedConditions.invisibilityOf(actualText));
+        assertThat(driver.findElements(By.className("modal-content")).size()).isZero();
+
+
+
+    }
+    @Test(priority = 9)
+    public void progressBar(){
+        javaScript.scrollIntoView( driver.findElement(By.xpath("//h5[text()='Widgets']"))).click();
+        driver.findElement(By.xpath("//span[text()='Progress Bar']")).click();
+        driver.findElement(By.id("startStopButton")).click();
+        By byProgressBar = By.cssSelector("[role='progressbar']");
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+        wait.until(ExpectedConditions.attributeToBe(byProgressBar,"aria-valuenow","100"));
+
+        assertThat(driver.findElement(byProgressBar).getText()).isEqualTo("100%");
+
+        driver.findElement(By.id("resetButton")).click();
+        wait.until(ExpectedConditions.attributeToBe(byProgressBar,"aria-valuenow","0"));
+
+        assertThat(driver.findElement(byProgressBar).getAttribute("textContent")).isEqualTo("0%");
+    }
+
+    @Test(priority = 10)
+    public void checkTabs(){
+        List<String> activeTabs = Arrays.asList("what","origin","use");
+        javaScript.scrollIntoView( driver.findElement(By.xpath("//h5[text()='Widgets']"))).click();
+        javaScript.scrollIntoView( driver.findElement(By.xpath("//span[text()='Tabs']"))).click();
+
+        for (String tab:activeTabs){
+            WebElement webElement = driver.findElement(By.cssSelector(String.format("[data-rb-event-key='%s'",tab)));
+            assertThat(webElement.getAttribute("class").contains("disabled")).isFalse();
+        }
+        WebElement tabMore = driver.findElement(By.cssSelector("[data-rb-event-key='more'"));
+        assertThat(tabMore.getAttribute("class").contains("disabled")).isTrue();
+
+
+
+    }
+
+    @AfterMethod(alwaysRun = true)
     public void quitDriver() {
-       driver.quit();
-}
+        driver.quit();
+    }
 }
