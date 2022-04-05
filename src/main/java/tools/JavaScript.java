@@ -15,4 +15,7 @@ public class JavaScript {
         this.javascriptExecutor.executeScript("arguments[0].scrollIntoView(true);", webElement);
         return webElement;
     }
+    public void click(WebElement webElement){
+        this.javascriptExecutor.executeScript("arguments[0].click();", webElement);
+    }
 }
